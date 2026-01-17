@@ -5,11 +5,11 @@ ARG INSTALL_CLAUDE_CODE=1
 ARG INSTALL_CODEX=1
 
 # Install Node.js 20 from NodeSource
-RUN dnf install -y \
+RUN dnf install -y --allowerasing \
     ca-certificates \
     curl \
   && curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - \
-  && dnf install -y \
+  && dnf install -y --allowerasing \
     nodejs \
     bash \
     git \
