@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>agent-worker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap"
+    />
+    <link rel="stylesheet" href="https://unpkg.com/xterm/css/xterm.css" />
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4f1ea;
+        --panel: #fff8ef;
+        --ink: #1d1a16;
+        --accent: #2a6f97;
+        --muted: #75695f;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        background: radial-gradient(circle at top, #fff5e8, #efe3d4 60%);
+        color: var(--ink);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      header {
+        padding: 18px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 28px;
+        letter-spacing: 0.5px;
+      }
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border: 1px solid var(--ink);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      main {
+        max-width: 1400px;
+        width: 100%;
+        margin: 0 auto;
+        padding: 0 16px 24px;
+        flex: 1;
+        display: flex;
+      }
+      .panel {
+        background: var(--panel);
+        border: 2px solid var(--ink);
+        box-shadow: 12px 12px 0 var(--ink);
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        width: 100%;
+      }
+      .panel h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      .toolbar {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .tabbar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .tab {
+        padding: 6px 10px;
+        border: 1px solid var(--ink);
+        background: #fffdf7;
+        cursor: pointer;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .tab.active {
+        background: var(--ink);
+        color: #f7f2ea;
+      }
+      .tab.add {
+        border-style: dashed;
+      }
+      .tab .close {
+        border: none;
+        background: transparent;
+        color: inherit;
+        font-size: 12px;
+        padding: 0;
+        cursor: pointer;
+      }
+      button {
+        padding: 10px 14px;
+        border: 1px solid var(--ink);
+        background: var(--accent);
+        color: #f7f2ea;
+        font-size: 14px;
+        font-family: inherit;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .status {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      #terminal {
+        flex: 1;
+        min-height: 520px;
+        border: 1px solid var(--ink);
+        background: #0c0c0c;
+        letter-spacing: 0.2px;
+      }
+      .note {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      @media (max-width: 960px) {
+        header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 12px;
+        }
+        #terminal {
+          height: 420px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>agent-worker terminal</h1>
+      <div class="tag">web ssh style</div>
+    </header>
+    <main>
+      <section class="panel">
+        <div class="toolbar">
+          <h2>Interactive Shell</h2>
+          <div>
+            <button id="reconnect">Reconnect</button>
+            <span id="status" class="status">Disconnected</span>
+          </div>
+        </div>
+        <div id="tabbar" class="tabbar"></div>
+        <div id="terminal" aria-label="terminal"></div>
+        <div class="note">
+          The terminal runs inside the container. Attach your config volume to
+          access claude code or codex from the shell.
+        </div>
+      </section>
+    </main>
+    <script src="https://unpkg.com/xterm/lib/xterm.js"></script>
+    <script src="https://unpkg.com/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
+    <script>
+      const statusLabel = document.getElementById("status");
+      const reconnectButton = document.getElementById("reconnect");
+      const terminalEl = document.getElementById("terminal");
+      const tabbar = document.getElementById("tabbar");
+
+      const terminalTheme = {
+        background: "#0c0c0c",
+        foreground: "#f7f2ea",
+        cursor: "#f7f2ea",
+        selection: "#3a2e27",
+      };
+
+      const sessions = [];
+      let activeSession = null;
+      const storageKey = "agent-worker-pty-sessions";
+      let saveTimer = null;
+
+      const setStatus = (text) => {
+        statusLabel.textContent = text;
+      };
+
+      const scheduleSave = () => {
+        if (saveTimer) {
+          clearTimeout(saveTimer);
+        }
+        saveTimer = setTimeout(() => {
+          const payload = {
+            active: activeSession ? activeSession.id : null,
+            sessions: sessions.map((session) => ({
+              id: session.id,
+              name: session.name,
+            })),
+          };
+          localStorage.setItem(storageKey, JSON.stringify(payload));
+        }, 200);
+      };
+
+      const openSocket = (session, options = {}) => {
+        const protocol = location.protocol === "https:" ? "wss" : "ws";
+        const replay = options.replay ? "&replay=1" : "";
+        const url =
+          protocol +
+          "://" +
+          location.host +
+          `/ws/terminal?cols=${session.term.cols}&rows=${session.term.rows}` +
+          `&sessionId=${encodeURIComponent(session.id)}` +
+          replay;
+        const socket = new WebSocket(url);
+        session.socket = socket;
+
+        socket.addEventListener("open", () => {
+          if (activeSession === session) {
+            setStatus(`${session.name} connected`);
+          }
+          session.term.focus();
+        });
+
+        socket.addEventListener("message", (event) => {
+          let payload;
+          try {
+            payload = JSON.parse(event.data);
+          } catch (err) {
+            return;
+          }
+          if (payload.type === "session" && payload.id && !session.id) {
+            session.id = payload.id;
+            scheduleSave();
+          }
+          if (payload.type === "output") {
+            session.term.write(payload.data);
+          }
+        });
+
+        socket.addEventListener("close", () => {
+          if (activeSession === session) {
+            setStatus(`${session.name} disconnected`);
+          }
+        });
+
+        socket.addEventListener("error", () => {
+          if (activeSession === session) {
+            setStatus(`${session.name} error`);
+          }
+        });
+      };
+
+      const openSession = (name, id, options = {}) => {
+        const term = new Terminal({
+          cursorBlink: true,
+          fontSize: 15,
+          lineHeight: 1.2,
+          fontFamily: '"IBM Plex Mono","JetBrains Mono",monospace',
+          theme: terminalTheme,
+        });
+        const fitAddon = new FitAddon.FitAddon();
+        term.loadAddon(fitAddon);
+        const session = {
+          id: id || crypto.randomUUID(),
+          name,
+          term,
+          fitAddon,
+          socket: null,
+          tab: null,
+        };
+        sessions.push(session);
+        openSocket(session, options);
+        term.onData((data) => {
+          if (session.socket && session.socket.readyState === WebSocket.OPEN) {
+            session.socket.send(JSON.stringify({ type: "input", data }));
+          }
+        });
+
+        return session;
+      };
+
+      const renderTabs = () => {
+        tabbar.innerHTML = "";
+        sessions.forEach((session) => {
+          const tab = document.createElement("button");
+          tab.className = "tab" + (session === activeSession ? " active" : "");
+          const label = document.createElement("span");
+          label.textContent = session.name;
+          const close = document.createElement("button");
+          close.className = "close";
+          close.type = "button";
+          close.textContent = "x";
+          close.addEventListener("click", (event) => {
+            event.stopPropagation();
+            removeSession(session);
+          });
+          tab.append(label, close);
+          tab.addEventListener("click", () => setActiveSession(session));
+          session.tab = tab;
+          tabbar.appendChild(tab);
+        });
+        const add = document.createElement("button");
+        add.className = "tab add";
+        add.textContent = "+ new tty";
+        add.addEventListener("click", () => {
+          const next = openSession(`tty-${sessions.length + 1}`);
+          setActiveSession(next);
+        });
+        tabbar.appendChild(add);
+      };
+
+      const setActiveSession = (session) => {
+        if (!session) return;
+        activeSession = session;
+        terminalEl.innerHTML = "";
+        session.term.open(terminalEl);
+        session.fitAddon.fit();
+        session.term.focus();
+        renderTabs();
+        scheduleSave();
+      };
+
+      const removeSession = (session) => {
+        const index = sessions.indexOf(session);
+        if (index === -1) return;
+        if (session.socket && session.socket.readyState === WebSocket.OPEN) {
+          session.socket.send(JSON.stringify({ type: "terminate" }));
+          session.socket.close();
+        }
+        sessions.splice(index, 1);
+        scheduleSave();
+        if (session === activeSession) {
+          const next = sessions[index] || sessions[index - 1];
+          if (next) {
+            setActiveSession(next);
+          } else {
+            const fresh = openSession("tty-1");
+            setActiveSession(fresh);
+          }
+        } else {
+          renderTabs();
+        }
+      };
+
+      const resizeActive = () => {
+        if (!activeSession) return;
+        activeSession.fitAddon.fit();
+        if (
+          activeSession.socket &&
+          activeSession.socket.readyState === WebSocket.OPEN
+        ) {
+          activeSession.socket.send(
+            JSON.stringify({
+              type: "resize",
+              cols: activeSession.term.cols,
+              rows: activeSession.term.rows,
+            })
+          );
+        }
+      };
+
+      window.addEventListener("resize", resizeActive);
+
+      reconnectButton.addEventListener("click", () => {
+        if (!activeSession) return;
+        if (activeSession.socket) {
+          activeSession.socket.close();
+        }
+        openSocket(activeSession);
+        setActiveSession(activeSession);
+      });
+
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        try {
+          const payload = JSON.parse(stored);
+          if (Array.isArray(payload.sessions) && payload.sessions.length) {
+            payload.sessions.forEach((session) => {
+              openSession(session.name, session.id, { replay: true });
+            });
+            const active =
+              sessions.find((session) => session.id === payload.active) ||
+              sessions[0];
+            setActiveSession(active);
+          } else {
+            const first = openSession("tty-1");
+            setActiveSession(first);
+          }
+        } catch (err) {
+          const first = openSession("tty-1");
+          setActiveSession(first);
+        }
+      } else {
+        const first = openSession("tty-1");
+        setActiveSession(first);
+      }
+    </script>
+  </body>
+</html>

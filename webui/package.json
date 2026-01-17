@@ -1,0 +1,11 @@
+{
+  "name": "agent-worker-webui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Web terminal for agent-worker",
+  "main": "server.js",
+  "dependencies": {
+    "node-pty": "^1.0.0",
+    "ws": "^8.18.0"
+  }
+}
