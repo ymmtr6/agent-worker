@@ -1,0 +1,27 @@
+# Environment variables
+config/.env
+.env
+
+# Claude Code configuration
+config/claude-code/
+
+# Codex configuration
+config/codex/
+
+# GitHub CLI configuration
+config/gh/
+
+# Node modules
+node_modules/
+webui/node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

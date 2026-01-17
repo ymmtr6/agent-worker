@@ -31,6 +31,76 @@ claude code / codex の配布元が異なる場合は `Dockerfile` の `npm inst
 - `XDG_CONFIG_HOME=/config` を使用しています。
 - `-v /path/to/config:/config` で外部から注入してください。
 
+### Claude Code の設定
+
+Claude Code の設定は以下の2つの方法で注入できます。
+
+#### 1. 設定ファイルをマウント
+
+ホスト側の Claude Code 設定をコンテナにマウント：
+
+```bash
+# ホスト側の ~/.config/claude-code をコンテナの /config/claude-code にマウント
+docker run --rm -p 3000:3000 \
+  -v ~/.config/claude-code:/config/claude-code:ro \
+  agent-worker
+```
+
+または、config ディレクトリ全体をマウント：
+
+```bash
+# config/claude-code/ に設定ファイルを配置しておく
+docker run --rm -p 3000:3000 \
+  -v $(pwd)/config:/config \
+  agent-worker
+```
+
+#### 2. 環境変数で API キーを渡す
+
+```bash
+docker run --rm -p 3000:3000 \
+  -e ANTHROPIC_API_KEY=your_api_key_here \
+  -v $(pwd)/config:/config \
+  agent-worker
+```
+
+#### 複数の設定を組み合わせる例
+
+```bash
+docker run --rm -p 3000:3000 \
+  -e ANTHROPIC_API_KEY=your_api_key_here \
+  -e CLAUDE_CMD=claude \
+  -v $(pwd)/config:/config \
+  -v $(pwd)/workspace:/workspace \
+  agent-worker
+```
+
+#### 環境変数ファイルを使う
+
+`config/.env.example` をコピーして設定：
+
+```bash
+cp config/.env.example config/.env
+# config/.env を編集して API キーを設定
+
+docker run --rm -p 3000:3000 \
+  --env-file config/.env \
+  -v $(pwd)/config:/config \
+  agent-worker
+```
+
+### Codex の設定
+
+同様に Codex の設定も環境変数で渡せます：
+
+```bash
+docker run --rm -p 3000:3000 \
+  -e OPENAI_API_KEY=your_openai_key_here \
+  -e CODEX_CMD=codex \
+  -v $(pwd)/config:/config \
+  agent-worker
+```
+
 ## gh コマンド
 
 `github-cli` を同梱しているため、コンテナ内で `gh` が利用できます。
