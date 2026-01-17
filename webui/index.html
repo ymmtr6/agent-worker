@@ -19,6 +19,9 @@
         --ink: #1d1a16;
         --accent: #2a6f97;
         --muted: #75695f;
+        --connected: #2d7f4f;
+        --connecting: #e89f3c;
+        --disconnected: #c44536;
       }
       * {
         box-sizing: border-box;
@@ -33,120 +36,276 @@
         flex-direction: column;
       }
       header {
-        padding: 18px 16px;
+        padding: 8px 12px;
         display: flex;
         justify-content: space-between;
         align-items: center;
       }
       header h1 {
         margin: 0;
-        font-size: 28px;
-        letter-spacing: 0.5px;
+        font-size: 20px;
+        letter-spacing: 0.3px;
       }
       .tag {
         display: inline-flex;
         align-items: center;
-        gap: 6px;
-        padding: 6px 10px;
+        gap: 4px;
+        padding: 4px 8px;
         border: 1px solid var(--ink);
-        font-size: 11px;
+        font-size: 10px;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 0.8px;
+        transition: all 0.2s ease;
       }
       main {
-        max-width: 1400px;
+        max-width: 100%;
         width: 100%;
-        margin: 0 auto;
-        padding: 0 16px 24px;
+        margin: 0;
+        padding: 0 8px 8px;
         flex: 1;
         display: flex;
       }
       .panel {
         background: var(--panel);
         border: 2px solid var(--ink);
-        box-shadow: 12px 12px 0 var(--ink);
-        padding: 18px;
+        box-shadow: 6px 6px 0 var(--ink);
+        padding: 10px;
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 8px;
         width: 100%;
+        transition: box-shadow 0.3s ease;
       }
       .panel h2 {
-        margin: 0 0 12px;
-        font-size: 18px;
+        margin: 0;
+        font-size: 16px;
       }
       .toolbar {
         display: flex;
-        gap: 12px;
+        gap: 8px;
         align-items: center;
         justify-content: space-between;
+        flex-wrap: wrap;
       }
-      .tabbar {
+      .toolbar-right {
         display: flex;
         gap: 8px;
         align-items: center;
-        flex-wrap: wrap;
+      }
+      .tabbar-container {
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scrollbar-color: var(--muted) transparent;
+      }
+      .tabbar-container::-webkit-scrollbar {
+        height: 6px;
+      }
+      .tabbar-container::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .tabbar-container::-webkit-scrollbar-thumb {
+        background: var(--muted);
+        border-radius: 3px;
+      }
+      .tabbar {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        min-height: 32px;
       }
       .tab {
         padding: 6px 10px;
         border: 1px solid var(--ink);
         background: #fffdf7;
         cursor: pointer;
-        font-size: 12px;
+        font-size: 11px;
         text-transform: uppercase;
-        letter-spacing: 0.8px;
+        letter-spacing: 0.6px;
         display: inline-flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+        position: relative;
+        user-select: none;
+      }
+      .tab:hover {
+        background: #f5f0e5;
+        transform: translateY(-1px);
+        box-shadow: 2px 2px 0 var(--ink);
       }
       .tab.active {
         background: var(--ink);
         color: #f7f2ea;
+        box-shadow: 4px 4px 0 rgba(29, 26, 22, 0.3);
+      }
+      .tab.active:hover {
+        transform: translateY(0);
       }
       .tab.add {
         border-style: dashed;
+        font-weight: 600;
+      }
+      .tab.add:hover {
+        border-style: solid;
+        background: var(--accent);
+        color: #f7f2ea;
+      }
+      .tab-label {
+        cursor: text;
+      }
+      .tab-label.editing {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 2px 4px;
+        border-radius: 2px;
+        outline: 1px solid currentColor;
       }
       .tab .close {
         border: none;
-        background: transparent;
+        background: rgba(0, 0, 0, 0.1);
         color: inherit;
-        font-size: 12px;
-        padding: 0;
+        font-size: 14px;
+        padding: 2px 6px;
         cursor: pointer;
+        border-radius: 2px;
+        transition: all 0.2s ease;
+        line-height: 1;
+        font-weight: bold;
+      }
+      .tab .close:hover {
+        background: rgba(196, 69, 54, 0.8);
+        color: #fff;
+        transform: scale(1.1);
+      }
+      .tab.active .close:hover {
+        background: rgba(196, 69, 54, 1);
       }
       button {
-        padding: 10px 14px;
+        padding: 6px 10px;
         border: 1px solid var(--ink);
         background: var(--accent);
         color: #f7f2ea;
-        font-size: 14px;
+        font-size: 12px;
         font-family: inherit;
         cursor: pointer;
         font-weight: 600;
+        transition: all 0.2s ease;
+      }
+      button:hover {
+        background: #23597a;
+        transform: translateY(-1px);
+        box-shadow: 2px 2px 0 var(--ink);
+      }
+      button:active {
+        transform: translateY(0);
+        box-shadow: 1px 1px 0 var(--ink);
+      }
+      button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
       }
       .status {
-        font-size: 12px;
+        font-size: 11px;
         color: var(--muted);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        border: 1px solid currentColor;
+        border-radius: 2px;
+        transition: all 0.3s ease;
+      }
+      .status::before {
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: currentColor;
+        animation: pulse 2s ease-in-out infinite;
+      }
+      .status.connected {
+        color: var(--connected);
+        border-color: var(--connected);
+      }
+      .status.connecting {
+        color: var(--connecting);
+        border-color: var(--connecting);
+      }
+      .status.disconnected {
+        color: var(--disconnected);
+        border-color: var(--disconnected);
+      }
+      .status.disconnected::before {
+        animation: none;
+      }
+      @keyframes pulse {
+        0%, 100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.4;
+        }
       }
       #terminal {
         flex: 1;
-        min-height: 520px;
-        border: 1px solid var(--ink);
+        min-height: 600px;
+        border: 2px solid var(--ink);
         background: #0c0c0c;
         letter-spacing: 0.2px;
+        transition: border-color 0.3s ease;
+      }
+      #terminal:focus-within {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(42, 111, 151, 0.2);
       }
       .note {
-        font-size: 13px;
+        font-size: 11px;
         color: var(--muted);
+        line-height: 1.4;
+      }
+      .shortcuts {
+        font-size: 10px;
+        color: var(--muted);
+        padding: 6px 8px;
+        border: 1px dashed var(--muted);
+        border-radius: 3px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .shortcuts kbd {
+        background: var(--ink);
+        color: #f7f2ea;
+        padding: 2px 4px;
+        border-radius: 2px;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 9px;
       }
       @media (max-width: 960px) {
         header {
           flex-direction: column;
           align-items: flex-start;
-          gap: 12px;
+          gap: 6px;
+          padding: 6px 8px;
         }
         #terminal {
-          height: 420px;
+          min-height: 500px;
+        }
+        .toolbar {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .toolbar-right {
+          justify-content: space-between;
+        }
+        .panel {
+          box-shadow: 4px 4px 0 var(--ink);
+          padding: 8px;
+        }
+        main {
+          padding: 0 4px 4px;
         }
       }
     </style>
@@ -160,16 +319,26 @@
       <section class="panel">
         <div class="toolbar">
           <h2>Interactive Shell</h2>
-          <div>
+          <div class="toolbar-right">
             <button id="reconnect">Reconnect</button>
-            <span id="status" class="status">Disconnected</span>
+            <span id="status" class="status disconnected">Disconnected</span>
           </div>
         </div>
-        <div id="tabbar" class="tabbar"></div>
+        <div class="tabbar-container">
+          <div id="tabbar" class="tabbar"></div>
+        </div>
         <div id="terminal" aria-label="terminal"></div>
         <div class="note">
           The terminal runs inside the container. Attach your config volume to
           access claude code or codex from the shell.
+        </div>
+        <div class="shortcuts">
+          <span><kbd>Ctrl/Cmd+T</kbd> 新しいタブ</span>
+          <span><kbd>Ctrl/Cmd+W</kbd> タブを閉じる</span>
+          <span><kbd>Ctrl/Cmd+Tab</kbd> 次のタブ</span>
+          <span><kbd>Ctrl/Cmd+Shift+Tab</kbd> 前のタブ</span>
+          <span><kbd>Ctrl/Cmd+1-9</kbd> タブを選択</span>
+          <span><kbd>Double Click</kbd> タブ名を編集</span>
         </div>
       </section>
     </main>
@@ -193,8 +362,9 @@
       const storageKey = "agent-worker-pty-sessions";
       let saveTimer = null;
 
-      const setStatus = (text) => {
+      const setStatus = (text, state = 'disconnected') => {
         statusLabel.textContent = text;
+        statusLabel.className = 'status ' + state;
       };
 
       const scheduleSave = () => {
@@ -214,6 +384,9 @@
       };
 
       const openSocket = (session, options = {}) => {
+        if (activeSession === session) {
+          setStatus(`${session.name} connecting...`, 'connecting');
+        }
         const protocol = location.protocol === "https:" ? "wss" : "ws";
         const replay = options.replay ? "&replay=1" : "";
         const url =
@@ -228,7 +401,7 @@
 
         socket.addEventListener("open", () => {
           if (activeSession === session) {
-            setStatus(`${session.name} connected`);
+            setStatus(`${session.name} connected`, 'connected');
           }
           session.term.focus();
         });
@@ -251,13 +424,13 @@
 
         socket.addEventListener("close", () => {
           if (activeSession === session) {
-            setStatus(`${session.name} disconnected`);
+            setStatus(`${session.name} disconnected`, 'disconnected');
           }
         });
 
         socket.addEventListener("error", () => {
           if (activeSession === session) {
-            setStatus(`${session.name} error`);
+            setStatus(`${session.name} error`, 'disconnected');
           }
         });
       };
@@ -291,23 +464,75 @@
         return session;
       };
 
+      const editTabName = (session, labelEl) => {
+        const currentName = session.name;
+        labelEl.contentEditable = true;
+        labelEl.classList.add('editing');
+        labelEl.focus();
+
+        const range = document.createRange();
+        range.selectNodeContents(labelEl);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        const finishEdit = () => {
+          labelEl.contentEditable = false;
+          labelEl.classList.remove('editing');
+          const newName = labelEl.textContent.trim();
+          if (newName && newName !== currentName) {
+            session.name = newName;
+            scheduleSave();
+          } else {
+            labelEl.textContent = currentName;
+          }
+        };
+
+        const onKeyDown = (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            finishEdit();
+            labelEl.removeEventListener('keydown', onKeyDown);
+            labelEl.removeEventListener('blur', finishEdit);
+          } else if (e.key === 'Escape') {
+            labelEl.textContent = currentName;
+            labelEl.contentEditable = false;
+            labelEl.classList.remove('editing');
+            labelEl.removeEventListener('keydown', onKeyDown);
+            labelEl.removeEventListener('blur', finishEdit);
+          }
+        };
+
+        labelEl.addEventListener('keydown', onKeyDown);
+        labelEl.addEventListener('blur', finishEdit);
+      };
+
       const renderTabs = () => {
         tabbar.innerHTML = "";
         sessions.forEach((session) => {
           const tab = document.createElement("button");
           tab.className = "tab" + (session === activeSession ? " active" : "");
           const label = document.createElement("span");
+          label.className = "tab-label";
           label.textContent = session.name;
+          label.addEventListener("dblclick", (event) => {
+            event.stopPropagation();
+            editTabName(session, label);
+          });
           const close = document.createElement("button");
           close.className = "close";
           close.type = "button";
-          close.textContent = "x";
+          close.textContent = "×";
           close.addEventListener("click", (event) => {
             event.stopPropagation();
             removeSession(session);
           });
           tab.append(label, close);
-          tab.addEventListener("click", () => setActiveSession(session));
+          tab.addEventListener("click", (e) => {
+            if (e.target !== label) {
+              setActiveSession(session);
+            }
+          });
           session.tab = tab;
           tabbar.appendChild(tab);
         });
@@ -330,6 +555,15 @@
         session.term.focus();
         renderTabs();
         scheduleSave();
+
+        // Update status based on connection state
+        if (session.socket && session.socket.readyState === WebSocket.OPEN) {
+          setStatus(`${session.name} connected`, 'connected');
+        } else if (session.socket && session.socket.readyState === WebSocket.CONNECTING) {
+          setStatus(`${session.name} connecting...`, 'connecting');
+        } else {
+          setStatus(`${session.name} disconnected`, 'disconnected');
+        }
       };
 
       const removeSession = (session) => {
@@ -380,6 +614,48 @@
         }
         openSocket(activeSession);
         setActiveSession(activeSession);
+      });
+
+      // Keyboard shortcuts (Ctrl on Windows/Linux, Cmd on Mac)
+      document.addEventListener("keydown", (e) => {
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const modifier = isMac ? e.metaKey : e.ctrlKey;
+
+        // Ctrl/Cmd+T: New tab
+        if (modifier && e.key === 't') {
+          e.preventDefault();
+          const next = openSession(`tty-${sessions.length + 1}`);
+          setActiveSession(next);
+        }
+        // Ctrl/Cmd+W: Close active tab
+        else if (modifier && e.key === 'w') {
+          e.preventDefault();
+          if (activeSession && sessions.length > 0) {
+            removeSession(activeSession);
+          }
+        }
+        // Ctrl/Cmd+Tab: Next tab
+        else if (modifier && e.key === 'Tab' && !e.shiftKey) {
+          e.preventDefault();
+          const index = sessions.indexOf(activeSession);
+          const next = sessions[(index + 1) % sessions.length];
+          if (next) setActiveSession(next);
+        }
+        // Ctrl/Cmd+Shift+Tab: Previous tab
+        else if (modifier && e.shiftKey && e.key === 'Tab') {
+          e.preventDefault();
+          const index = sessions.indexOf(activeSession);
+          const prev = sessions[(index - 1 + sessions.length) % sessions.length];
+          if (prev) setActiveSession(prev);
+        }
+        // Ctrl/Cmd+1-9: Jump to specific tab
+        else if (modifier && e.key >= '1' && e.key <= '9') {
+          e.preventDefault();
+          const index = parseInt(e.key) - 1;
+          if (sessions[index]) {
+            setActiveSession(sessions[index]);
+          }
+        }
       });
 
       const stored = localStorage.getItem(storageKey);
