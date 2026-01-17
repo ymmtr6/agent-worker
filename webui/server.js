@@ -4,6 +4,7 @@ const path = require("path");
 const { spawn } = require("child_process");
 const WebSocket = require("ws");
 const pty = require("node-pty");
+const crypto = require("crypto");
 
 const port = process.env.PORT || 3000;
 const indexPath = path.join(__dirname, "index.html");
@@ -18,6 +19,35 @@ const toolCommands = {
   claude: process.env.CLAUDE_CMD || "claude",
   codex: process.env.CODEX_CMD || "codex",
 };
+
+// Whitelist of environment variables to pass to child processes
+// This prevents leaking sensitive information like API keys
+const ENV_WHITELIST = [
+  "PATH",
+  "HOME",
+  "USER",
+  "SHELL",
+  "TERM",
+  "LANG",
+  "LC_ALL",
+  "TZ",
+  "NODE_ENV",
+  "XDG_CONFIG_HOME",
+  "AGENT_WORKER_CONFIG",
+];
+
+// Filter environment variables based on whitelist
+const filterEnv = () => {
+  const filtered = {};
+  for (const key of ENV_WHITELIST) {
+    if (process.env[key]) {
+      filtered[key] = process.env[key];
+    }
+  }
+  return filtered;
+};
+
+const filteredEnv = filterEnv();
 
 const sessions = new Map();
 
@@ -43,9 +73,15 @@ const runTool = ({ tool, prompt }) =>
       return;
     }
 
+    // Validate command to prevent command injection
+    if (!/^[a-zA-Z0-9_\-\/]+$/.test(command)) {
+      reject(new Error("invalid tool command"));
+      return;
+    }
+
     const child = spawn(command, [], {
       stdio: ["pipe", "pipe", "pipe"],
-      env: process.env,
+      env: filteredEnv,
     });
 
     let stdout = "";
@@ -120,6 +156,13 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
+      // Validate command to prevent command injection
+      if (!/^[a-zA-Z0-9_\-\/]+$/.test(command)) {
+        res.writeHead(400, { "content-type": "application/json" });
+        res.end(JSON.stringify({ ok: false, error: "invalid tool command" }));
+        return;
+      }
+
       res.writeHead(200, {
         "content-type": "application/x-ndjson",
         "cache-control": "no-cache",
@@ -128,7 +171,7 @@ const server = http.createServer(async (req, res) => {
 
       child = spawn(command, [], {
         stdio: ["pipe", "pipe", "pipe"],
-        env: process.env,
+        env: filteredEnv,
       });
 
       const timer = setTimeout(() => {
@@ -201,7 +244,7 @@ const spawnShell = (cols, rows) =>
     cols,
     rows,
     cwd: defaultCwd,
-    env: { ...process.env, TERM: "xterm-256color" },
+    env: { ...filteredEnv, TERM: "xterm-256color" },
   });
 
 const trimBuffer = (buffer) => {
@@ -266,11 +309,10 @@ wss.on("connection", (ws, req) => {
   const cols = Number(url.searchParams.get("cols") || 80);
   const rows = Number(url.searchParams.get("rows") || 24);
   const requestedId = url.searchParams.get("sessionId");
-  const sessionId =
-    requestedId ||
-    (globalThis.crypto && globalThis.crypto.randomUUID
-      ? globalThis.crypto.randomUUID()
-      : String(Date.now()) + Math.random().toString(16).slice(2));
+
+  // Generate secure session ID using crypto.randomUUID
+  const sessionId = requestedId || crypto.randomUUID();
+
   let session = sessions.get(sessionId);
   if (!session) {
     session = createSession(sessionId, cols, rows);

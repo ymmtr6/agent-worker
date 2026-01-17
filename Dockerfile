@@ -36,11 +36,24 @@ WORKDIR /workspace
 COPY webui/package*.json /opt/webui/
 RUN cd /opt/webui \
   && npm install --omit=dev \
-  && npm cache clean --force \
+  && npm cache clean --force
+
+# Remove build dependencies to reduce image size and attack surface
+RUN dnf remove -y \
+    gcc-c++ \
+    make \
+    python3 \
   && dnf clean all \
   && rm -rf /var/cache/dnf
 
+# Create non-root user for running the application
+RUN useradd -m -u 1000 -s /bin/bash agent-worker \
+  && mkdir -p /workspace /config \
+  && chown -R agent-worker:agent-worker /workspace /config /opt/webui
+
 COPY webui /opt/webui
+
+USER agent-worker
 
 EXPOSE 3000
 VOLUME ["/config"]
