@@ -76,17 +76,6 @@
         width: 100%;
         transition: box-shadow 0.3s ease;
       }
-      .panel h2 {
-        margin: 0;
-        font-size: 16px;
-      }
-      .toolbar {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
-      }
       .toolbar-right {
         display: flex;
         gap: 8px;
@@ -147,6 +136,7 @@
       .tab.add {
         border-style: dashed;
         font-weight: 600;
+        color: #4a4a4a;
       }
       .tab.add:hover {
         border-style: solid;
@@ -265,24 +255,6 @@
         color: var(--muted);
         line-height: 1.4;
       }
-      .shortcuts {
-        font-size: 10px;
-        color: var(--muted);
-        padding: 6px 8px;
-        border: 1px dashed var(--muted);
-        border-radius: 3px;
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-      }
-      .shortcuts kbd {
-        background: var(--ink);
-        color: #f7f2ea;
-        padding: 2px 4px;
-        border-radius: 2px;
-        font-family: "IBM Plex Mono", monospace;
-        font-size: 9px;
-      }
       @media (max-width: 960px) {
         header {
           flex-direction: column;
@@ -292,13 +264,6 @@
         }
         #terminal {
           min-height: 500px;
-        }
-        .toolbar {
-          flex-direction: column;
-          align-items: stretch;
-        }
-        .toolbar-right {
-          justify-content: space-between;
         }
         .panel {
           box-shadow: 4px 4px 0 var(--ink);
@@ -313,17 +278,13 @@
   <body>
     <header>
       <h1>agent-worker terminal</h1>
-      <div class="tag">web ssh style</div>
+      <div class="toolbar-right">
+        <button id="reconnect">Reconnect</button>
+        <span id="status" class="status disconnected">Disconnected</span>
+      </div>
     </header>
     <main>
       <section class="panel">
-        <div class="toolbar">
-          <h2>Interactive Shell</h2>
-          <div class="toolbar-right">
-            <button id="reconnect">Reconnect</button>
-            <span id="status" class="status disconnected">Disconnected</span>
-          </div>
-        </div>
         <div class="tabbar-container">
           <div id="tabbar" class="tabbar"></div>
         </div>
@@ -331,14 +292,6 @@
         <div class="note">
           The terminal runs inside the container. Attach your config volume to
           access claude code or codex from the shell.
-        </div>
-        <div class="shortcuts">
-          <span><kbd>Ctrl/Cmd+T</kbd> 新しいタブ</span>
-          <span><kbd>Ctrl/Cmd+W</kbd> タブを閉じる</span>
-          <span><kbd>Ctrl/Cmd+Tab</kbd> 次のタブ</span>
-          <span><kbd>Ctrl/Cmd+Shift+Tab</kbd> 前のタブ</span>
-          <span><kbd>Ctrl/Cmd+1-9</kbd> タブを選択</span>
-          <span><kbd>Double Click</kbd> タブ名を編集</span>
         </div>
       </section>
     </main>
