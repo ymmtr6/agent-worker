@@ -1,21 +1,27 @@
-ARG BASE_IMAGE=node:20-alpine
+ARG BASE_IMAGE=rockylinux:9
 FROM ${BASE_IMAGE}
 
 ARG INSTALL_CLAUDE_CODE=1
 ARG INSTALL_CODEX=1
 
-RUN apk add --no-cache \
-    bash \
+# Install Node.js 20 from NodeSource
+RUN dnf install -y \
     ca-certificates \
     curl \
+  && curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - \
+  && dnf install -y \
+    nodejs \
+    bash \
     git \
-    github-cli \
-    openssh-client \
-  && apk add --no-cache --virtual .build-deps \
-    g++ \
+    openssh-clients \
+    gcc-c++ \
     make \
     python3 \
   && mkdir -p /opt/webui
+
+# Install GitHub CLI
+RUN curl -fsSL https://cli.github.com/packages/rpm/gh-cli.repo -o /etc/yum.repos.d/gh-cli.repo \
+  && dnf install -y gh
 
 # Install claude code and codex CLIs (replace packages if your org uses different sources).
 RUN if [ "${INSTALL_CLAUDE_CODE}" = "1" ]; then npm install -g @anthropic-ai/claude-code; fi \
@@ -31,7 +37,8 @@ COPY webui/package*.json /opt/webui/
 RUN cd /opt/webui \
   && npm install --omit=dev \
   && npm cache clean --force \
-  && apk del .build-deps
+  && dnf clean all \
+  && rm -rf /var/cache/dnf
 
 COPY webui /opt/webui
 
