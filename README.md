@@ -1,6 +1,6 @@
 # agent-worker
 
-claude code や codex を動作させる開発用 Docker イメージとダミー WebUI。
+claude code や codex を動作させる開発用 Docker イメージと WebUI。
 
 ## 使い方
 
@@ -37,7 +37,8 @@ claude code / codex の配布元が異なる場合は `Dockerfile` の `npm inst
 
 ## WebUI と CUI
 
-WebUI はコンテナ内の bash を WebSocket 経由で操作できます。
+WebUI はコンテナ内の bash を WebSocket + PTY で操作できます。
+タブで複数の tty を開き、削除も可能です。
 
 ```
 docker run --rm -p 3000:3000 \
@@ -53,7 +54,9 @@ docker run --rm -p 3000:3000 \
 - `AW_SHELL_CWD` (default: `/workspace`)
 
 PTY セッションはサーバ側で一定時間保持され、リロード後に復帰できます。
-履歴の再送は行わないため、必要なら Enter でプロンプトを再表示してください。
+リロード時のみ直前の画面内容を再送します（Reconnect では再送しません）。
 
 - `AW_PTY_TTL_MS` (default: 300000)
 - `AW_PTY_MAX_BUFFER` (default: 200000)
+
+ブラウザ側はセッション ID を保存して復帰に利用します。
